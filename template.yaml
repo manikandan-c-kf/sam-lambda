@@ -18,7 +18,7 @@ Resources:
     Properties:
       FunctionName: !Sub read-env-${ProjectName}-${Stage}
       Handler: app.lambda_handler
-      Runtime: python3.13
+      Runtime: python3.11
       CodeUri: src/
       MemorySize: 128
       Timeout: 10
