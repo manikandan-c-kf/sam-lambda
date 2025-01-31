@@ -29,3 +29,8 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub "arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/*"
+
+Outputs:
+  LambdaFunctionArn:
+    Description: "ARN of the deployed Lambda function"
+    Value: !GetAtt ReadEnvFunction.Arn
