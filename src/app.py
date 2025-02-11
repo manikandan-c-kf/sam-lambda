@@ -1,48 +1,52 @@
 import json
 import boto3
 import os
+from botocore.exceptions import ClientError
 
-ssm = boto3.client("ssm", region_name=os.getenv("AWS_REGION", "us-east-1"))
-
-def get_parameters_by_path(path, with_decryption=True):
-    """Fetches all parameters under a given path from AWS SSM Parameter Store"""
-    parameters = {}
-    next_token = None
-
-    try:
-        while True:
-            if next_token:
-                response = ssm.get_parameters_by_path(Path=path, WithDecryption=with_decryption, Recursive=True, NextToken=next_token)
-            else:
-                response = ssm.get_parameters_by_path(Path=path, WithDecryption=with_decryption, Recursive=True)
-                
-            print("response --- ", response)
-            
-            for param in response.get("Parameters", []):
-                param_name = param["Name"].split("/")[-1]
-                parameters[param_name] = param["Value"]
-
-            next_token = response.get("NextToken")
-            if not next_token:
-                break
-
-    except Exception as e:
-        print(f"Error fetching parameters: {e}")
-
-    return parameters
+session = boto3.session.Session()
+secretsmanager = session.client(
+    service_name='secretsmanager',
+    region_name=os.getenv("AWS_REGION", "us-east-1")
+)
 
 def lambda_handler(event, context):
-    environment = event.get("environment", "development")
+    try:
+        print(event)
+        valid_environments = ["development", "staging", "production", "dev", "stage", "prod"]
+        if 'environment' not in event:
+            raise Exception('Required parameter is not available.')
+        
+        if event['environment'] not in valid_environments:
+            raise Exception('Not a valid environment.')
+        secrets = {}
+        finalEnv = ''
+        projectName = event['project']
+        
+        secretName = f"{event['environment']}/{projectName}/env"
+        response = secretsmanager.get_secret_value(
+            SecretId=secretName,
+        )
+        
+        print("response --- ", response)
 
-    # Fetch all parameters under /config/
-    env_vars = get_parameters_by_path("/config/")
-
-    # Add ENVIRONMENT variable separately
-    env_vars["ENVIRONMENT"] = environment
-    
-    print("env_vars --- ", env_vars)
-
-    return {
-        "statusCode": 200,
-        "body": env_vars,
-    }
+        if 'SecretString' in response:
+            secretsData = json.loads(response['SecretString'])
+            secrets.update(secretsData)
+        
+        if len(secrets) > 0:
+            buildEnv = []
+            for key,value in secrets.items():
+                env = key + "=" + str(value)
+                buildEnv.append(env)
+            finalEnv = "\n".join(buildEnv)
+        
+        return {
+            "status": "success",
+            "body": finalEnv
+        }
+    except Exception as e:
+        print(str(e))
+        return {
+            "status": "failed",
+            "body": str(e)
+        }

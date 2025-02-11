@@ -29,6 +29,10 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub "arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/*"
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub "arn:aws:secretsmanager:us-east-1:${AWS::AccountId}:secret:*"
 
 Outputs:
   LambdaFunctionArn:
