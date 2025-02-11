@@ -15,7 +15,9 @@ def get_parameters_by_path(path, with_decryption=True):
                 response = ssm.get_parameters_by_path(Path=path, WithDecryption=with_decryption, Recursive=True, NextToken=next_token)
             else:
                 response = ssm.get_parameters_by_path(Path=path, WithDecryption=with_decryption, Recursive=True)
-
+                
+            print("response --- ", response)
+            
             for param in response.get("Parameters", []):
                 param_name = param["Name"].split("/")[-1]
                 parameters[param_name] = param["Value"]
@@ -37,6 +39,8 @@ def lambda_handler(event, context):
 
     # Add ENVIRONMENT variable separately
     env_vars["ENVIRONMENT"] = environment
+    
+    print("env_vars --- ", env_vars)
 
     return {
         "statusCode": 200,
